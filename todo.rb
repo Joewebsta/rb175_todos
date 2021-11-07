@@ -46,8 +46,15 @@ post '/lists' do
     session[:error] = error
     erb :new_list, layout: :layout
   else
-    session[:lists] << { name: list_name, todos: [] }
+    session[:lists] << { id: session[:list_count], name: list_name, todos: [] }
     session[:success] = 'This list has been created.'
     redirect '/lists'
   end
+end
+
+# View an individual list
+get '/lists/:id' do
+  id = params[:id].to_i
+  @list = session[:lists][id]
+  erb :list, layout: :layout
 end
