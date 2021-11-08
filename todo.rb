@@ -47,7 +47,7 @@ post '/lists' do
     session[:error] = error
     erb :new_list, layout: :layout
   else
-    session[:lists] << { id: session[:list_count], name: list_name, todos: [] }
+    session[:lists] << { name: list_name, todos: [] }
     session[:success] = 'This list has been created.'
     redirect '/lists'
   end
@@ -55,7 +55,37 @@ end
 
 # View an individual list
 get '/lists/:id' do
+  @id = params[:id].to_i
+  @list = session[:lists][@id]
+  erb :list, layout: :layout
+end
+
+# Edit an exisiting list
+get '/lists/:id/edit' do
+  @id = params[:id].to_i
+  @list = session[:lists][@id]
+  erb :edit_list, layout: :layout
+end
+
+# Update an exisiting todo list
+post '/lists/:id' do
+  list_name = params[:list_name].strip
   id = params[:id].to_i
   @list = session[:lists][id]
-  erb :list, layout: :layout
+
+  error = error_for_list_name(list_name)
+  if error
+    session[:error] = error
+    erb :edit_list, layout: :layout
+  else
+    @list[:name] = list_name
+    session[:success] = 'This list has been edited successfully.'
+    redirect "/lists/#{id}"
+  end
+end
+
+post '/lists/:id/destroy' do
+  session[:lists].delete_at(params[:id].to_i)
+  session[:success] = 'The list has been deleted.'
+  redirect '/lists'
 end
