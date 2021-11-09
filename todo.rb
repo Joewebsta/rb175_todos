@@ -11,6 +11,10 @@ configure do
   set :session_secret, 'secret'
 end
 
+configure do
+  set :erb, escape_html: true
+end
+
 helpers do
   def all_todos_complete?(list)
     todos_count(list).positive? && incomplete_todo_count(list).zero?
@@ -45,6 +49,14 @@ end
 
 before do
   session[:lists] ||= []
+end
+
+def load_list(index)
+  list = session[:lists][index] if index && session[:lists][index]
+  return list if list
+
+  session[:error] = 'The specified list was not found.'
+  redirect '/lists'
 end
 
 get '/' do
@@ -93,14 +105,14 @@ end
 # View an individual list
 get '/lists/:id' do
   @list_id = params[:id].to_i
-  @list = session[:lists][@list_id]
+  @list = load_list(@list_id)
   erb :list, layout: :layout
 end
 
 # Edit an exisiting list
 get '/lists/:id/edit' do
   @id = params[:id].to_i
-  @list = session[:lists][@id]
+  @list = load_list(@id)
   erb :edit_list, layout: :layout
 end
 
@@ -108,7 +120,7 @@ end
 post '/lists/:id' do
   list_name = params[:list_name].strip
   id = params[:id].to_i
-  @list = session[:lists][id]
+  @list = load_list(id)
 
   error = error_for_list_name(list_name)
   if error
@@ -131,7 +143,8 @@ end
 # Add a todo to a list
 post '/lists/:list_id/todos' do
   @list_id = params[:list_id].to_i
-  @list = session[:lists][@list_id]
+  @list = load_list(@list_id)
+  # @list = session[:lists][@list_id]
   text = params[:todo].strip
 
   error = error_for_todo(text)
@@ -147,8 +160,8 @@ end
 
 # Delete a todo from a list
 post '/lists/:list_id/todos/:todo_id/destroy' do
-  @list_id = params[:@list_id].to_i
-  @list = session[:lists][@list_id]
+  @list_id = params[:list_id].to_i
+  @list = load_list(@list_id)
 
   todo_id = params[:todo_id].to_i
   @list[:todos].delete_at(todo_id)
@@ -172,7 +185,7 @@ end
 # Mark all todos complete for a list
 post '/lists/:list_id/complete_all' do
   @list_id = params[:list_id].to_i
-  @list = session[:lists][@list_id]
+  @list = load_list(@list_id)
 
   @list[:todos].each { |todo| todo[:completed] = 'true' }
 
