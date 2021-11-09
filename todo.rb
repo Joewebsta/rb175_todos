@@ -12,7 +12,7 @@ end
 
 helpers do
   def all_todos_complete?(list)
-    !todos_count(list).empty? && incomplete_todo_count(list).zero?
+    todos_count(list).positive? && incomplete_todo_count(list).zero?
   end
 
   def todos_count(list)
@@ -25,6 +25,20 @@ helpers do
 
   def list_class(list)
     'complete' if all_todos_complete?(list)
+  end
+
+  def sort_lists(lists)
+    complete_lists, incomplete_lists = lists.partition { |list| all_todos_complete?(list) }
+
+    incomplete_lists.each { |list| yield(list, lists.index(list)) }
+    complete_lists.each { |list| yield(list, lists.index(list)) }
+  end
+
+  def sort_todos(todos)
+    complete_todos, incomplete_todos = todos.partition { |todo| todo[:completed] }
+
+    incomplete_todos.each { |todo| yield(todo, todos.index(todo)) }
+    complete_todos.each { |todo| yield(todo, todos.index(todo)) }
   end
 end
 
