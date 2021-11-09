@@ -10,6 +10,24 @@ configure do
   set :session_secret, 'secret'
 end
 
+helpers do
+  def all_todos_complete?(list)
+    !todos_count(list).empty? && incomplete_todo_count(list).zero?
+  end
+
+  def todos_count(list)
+    list[:todos].size
+  end
+
+  def incomplete_todo_count(list)
+    list[:todos].select { |todo| todo[:completed] == false }.size
+  end
+
+  def list_class(list)
+    'complete' if all_todos_complete?(list)
+  end
+end
+
 before do
   session[:lists] ||= []
 end
@@ -125,7 +143,7 @@ end
 
 # Update the status of a todo
 post '/lists/:list_id/todos/:todo_id' do
-  @list_id = params[:@list_id].to_i
+  @list_id = params[:list_id].to_i
   @list = session[:lists][@list_id]
 
   todo_id = params[:todo_id].to_i
@@ -138,7 +156,7 @@ end
 
 # Mark all todos complete for a list
 post '/lists/:list_id/complete_all' do
-  @list_id = params[:@list_id].to_i
+  @list_id = params[:list_id].to_i
   @list = session[:lists][@list_id]
 
   @list[:todos].each { |todo| todo[:completed] = 'true' }
