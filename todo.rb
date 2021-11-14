@@ -32,11 +32,11 @@ helpers do
     'complete' if all_todos_complete?(list)
   end
 
-  def sort_lists(lists)
+  def sort_lists(lists, &block)
     complete_lists, incomplete_lists = lists.partition { |list| all_todos_complete?(list) }
 
-    incomplete_lists.each { |list| yield(list, lists.index(list)) }
-    complete_lists.each { |list| yield(list, lists.index(list)) }
+    incomplete_lists.each(&block)
+    complete_lists.each(&block)
   end
 
   def sort_todos(todos)
@@ -52,12 +52,17 @@ def next_todo_id(todos)
   max + 1
 end
 
+def next_list_id(lists)
+  max = lists.map { |list| list[:id] }.max || 0
+  max + 1
+end
+
 before do
   session[:lists] ||= []
 end
 
-def load_list(index)
-  list = session[:lists][index] if index && session[:lists][index]
+def load_list(id)
+  list = session[:lists].find { |list| list[:id] == id }
   return list if list
 
   session[:error] = 'The specified list was not found.'
@@ -95,13 +100,14 @@ end
 # Create a new list
 post '/lists' do
   list_name = params[:list_name].strip
-  error = error_for_list_name(list_name)
 
+  error = error_for_list_name(list_name)
   if error
     session[:error] = error
     erb :new_list, layout: :layout
   else
-    session[:lists] << { name: list_name, todos: [] }
+    id = next_list_id(session[:lists])
+    session[:lists] << { id: id, name: list_name, todos: [] }
     session[:success] = 'This list has been created.'
     redirect '/lists'
   end
@@ -140,12 +146,13 @@ end
 
 # Delete a list
 post '/lists/:id/destroy' do
-  session[:lists].delete_at(params[:id].to_i)
+  id = params[:id].to_i
+  session[:lists].reject! { |list| list[:id] == id }
+  session[:success] = 'The list has been deleted.'
 
   if env['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
     '/lists'
   else
-    session[:success] = 'The list has been deleted.'
     redirect '/lists'
   end
 end
@@ -161,7 +168,7 @@ post '/lists/:list_id/todos' do
     session[:error] = error
     erb :list, layout: :layout
   else
-    id = next_todo_id(@list[:todos])
+    id = next_list_id(@list[:todos])
     @list[:todos] << { id: id, name: text, completed: false }
 
     session[:success] = 'The todo was added.'
